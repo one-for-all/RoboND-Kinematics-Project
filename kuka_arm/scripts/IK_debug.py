@@ -2,6 +2,7 @@ from sympy import *
 from time import time
 from mpmath import radians
 import tf
+from IK_server import compute_IK
 
 '''
 Format of test case is [ [[EE position],[EE orientation as quaternions]],[WC location],[joint angles]]
@@ -22,7 +23,10 @@ test_cases = {1:[[[2.16135,-1.42635,1.55109],
                   [0.01735,-0.2179,0.9025,0.371016]],
                   [-1.1669,-0.17989,0.85137],
                   [-2.99,-0.12,0.94,4.06,1.29,-4.12]],
-              4:[],
+              4:[[[2.15286, 0, 1.94653],
+                  [0, -0.000148353, 0, 1]],
+                  [1.84986, 0, 1.94645],
+                  [0, 0, 0, 0, 0, 0]],
               5:[]}
 
 
@@ -63,13 +67,10 @@ def test_code(test_case):
     ## 
 
     ## Insert IK code here!
-    
-    theta1 = 0
-    theta2 = 0
-    theta3 = 0
-    theta4 = 0
-    theta5 = 0
-    theta6 = 0
+    joint_trajectory_list = compute_IK(req, calculate_fk=True)
+
+    theta1, theta2, theta3, theta4, theta5, theta6 = joint_trajectory_list[0][0].positions
+    pwc, pee, euler_angles = joint_trajectory_list[0][1]
 
     ## 
     ########################################################################################
@@ -84,8 +85,9 @@ def test_code(test_case):
     ########################################################################################
 
     ## For error analysis please set the following variables of your WC location and EE location in the format of [x,y,z]
-    your_wc = [1,1,1] # <--- Load your calculated WC values in this array
-    your_ee = [1,1,1] # <--- Load your calculated end effector value from your forward kinematics
+    your_wc = list(pwc) # <--- Load your calculated WC values in this array
+    your_ee = list(pee) # <--- Load your calculated end effector value from your forward kinematics
+    your_ori = list(euler_angles)
     ########################################################################################
 
     ## Error analysis
@@ -131,11 +133,24 @@ def test_code(test_case):
         print ("End effector error for z position is: %04.8f" % ee_z_e)
         print ("Overall end effector offset is: %04.8f units \n" % ee_offset)
 
-
+    # Find FK EE orientation error
+    if True:  # check orientation error
+        (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(
+            test_case[0][1])
+        print(roll, pitch, yaw)
+        print(your_ori)
+        ori_x_e = abs(your_ori[0]-roll)
+        ori_y_e = abs(your_ori[1]-pitch)
+        ori_z_e = abs(your_ori[2]-yaw)
+        ori_offset = sqrt(ori_x_e**2 + ori_y_e**2 + ori_z_e**2)
+        print ("\nEnd effector error for x ori is: %04.8f" % ori_x_e)
+        print ("End effector error for y ori is: %04.8f" % ori_y_e)
+        print ("End effector error for z ori is: %04.8f" % ori_z_e)
+        print ("Overall end effector ori offset is: %04.8f units \n" % ori_offset)
 
 
 if __name__ == "__main__":
     # Change test case number for different scenarios
-    test_case_number = 1
+    test_case_number = 3
 
     test_code(test_cases[test_case_number])
