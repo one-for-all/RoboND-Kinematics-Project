@@ -116,11 +116,12 @@ To find q2:
 * phi = atan2(h, l)
 * A = sqrt(a3^2 + d4^2)
 * B = a2
-* C = sqrt(h^2 + l^2)
+* C = sqrt(h^2 + l^2)    
+
 Using law of cosines, get
 * a = acos((B * B + C * C - A * A) / (2 * B * C))
 
-Finally,    
+All of which gives,    
 **q2 = pi/2 - a - phi**
 
 To find q3:
@@ -128,14 +129,15 @@ To find q3:
 ![q3 derivation figure][q3_derivation]
 
 * rho = atan2(a3, d4) + pi/2
+
 Again using law of cosines, get
 * c = acos((B * B + A * A - C * C) / (2 * B * A))
 
-Which gives:
+Which gives:    
 **q3 = pi - c - rho**
 
 ##### Orientation: 
-To find, angles for last 3 joints, we first find the rotation matrix from joint3 to joint6    
+To find angles for last 3 joints, we first find the rotation matrix from joint3 to joint6    
 R3_6 = R3_g = Inverse(R0_3) * Rrpy
 
 It can be computed to be:
@@ -146,9 +148,9 @@ It can be computed to be:
 | sin(q5)*cos(q6) | -sin(q5)*sin(q6) | cos(q5) |
 | -sin(q4)*cos(q5)*cos(q6) - sin(q6)*cos(q4) | sin(q4)*sin(q6)*cos(q5) - cos(q4)*cos(q6) | sin(q4)*sin(q5) |
 
-Define p = sqrt(r13 * r13 + r33 * r33), then    
+Define p = sqrt(r13^2 + r33^2), then    
 **q5 = atan2(p, r23)**    
-**q4 = atan2(r33 / p, -r13 / p)**
+**q4 = atan2(r33 / p, -r13 / p)**    
 **q6 = atan2(-r22 / p, r21 / p)**
 
 ### Project Implementation
