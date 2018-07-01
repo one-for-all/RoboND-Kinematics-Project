@@ -84,10 +84,12 @@ The homogeneous transform matrix from base to gripper is therefore:
 
 Written in symbolic form:
 
-sin(pitch)*cos(roll)*cos(yaw) + sin(roll)*sin(yaw) | -sin(pitch)*sin(roll)*cos(yaw) + sin(yaw)*cos(roll) | cos(pitch)*cos(yaw) | x
-sin(pitch)*sin(yaw)*cos(roll) - sin(roll)*cos(yaw) | -sin(pitch)*sin(roll)*sin(yaw) - cos(roll)*cos(yaw) | sin(yaw)*cos(pitch) | y
-cos(pitch)*cos(roll) | -sin(roll)*cos(pitch) | -sin(pitch) | z
-0 |  0 | 0 | 1
+|     |     |     |    |
+| --- | --- | --- | --- |
+| sin(pitch)*cos(roll)*cos(yaw) + sin(roll)*sin(yaw) | -sin(pitch)*sin(roll)*cos(yaw) + sin(yaw)*cos(roll) | cos(pitch)*cos(yaw) | x |
+| sin(pitch)*sin(yaw)*cos(roll) - sin(roll)*cos(yaw) | -sin(pitch)*sin(roll)*sin(yaw) - cos(roll)*cos(yaw) | sin(yaw)*cos(pitch) | y |
+| cos(pitch)*cos(roll) | -sin(roll)*cos(pitch) | -sin(pitch) | z |
+| 0 |  0 | 0 | 1 |
 
 #### 3. Decouple Inverse Kinematics problem into Inverse Position Kinematics and inverse Orientation Kinematics; doing so derive the equations to calculate all individual joint angles.
 
@@ -95,7 +97,7 @@ Because the rotation axes of joint4, joint5 and joint6 intersect at a single poi
 
 The Inverse Kinematics problem can therefore be decomposed into position and orientation.
 
-##### Position
+##### Position: 
 The target position of wrist center is target position of end-effector minus dg along Z6, as shown in the robot figure:    
 pwc_target = pee - dg * Rrpy[:, 2]
 
@@ -132,17 +134,19 @@ Again using law of cosines, get
 Which gives:
 **q3 = pi - c - rho**
 
-##### Orientation
-To find, angles for last 3 joints, we first find the rotation matrix from joint3 to joint6
+##### Orientation: 
+To find, angles for last 3 joints, we first find the rotation matrix from joint3 to joint6    
 R3_6 = R3_g = Inverse(R0_3) * Rrpy
 
 It can be computed to be:
 
--sin(q4)*sin(q6) + cos(q4)*cos(q5)*cos(q6) | -sin(q4)*cos(q6) - sin(q6)*cos(q4)*cos(q5) | -sin(q5)*cos(q4)
-sin(q5)*cos(q6) | -sin(q5)*sin(q6) | cos(q5)
--sin(q4)*cos(q5)*cos(q6) - sin(q6)*cos(q4) | sin(q4)*sin(q6)*cos(q5) - cos(q4)*cos(q6) | sin(q4)*sin(q5)
+| | | | 
+| --- | --- | --- |
+| -sin(q4)*sin(q6) + cos(q4)*cos(q5)*cos(q6) | -sin(q4)*cos(q6) - sin(q6)*cos(q4)*cos(q5) | -sin(q5)*cos(q4) |
+| sin(q5)*cos(q6) | -sin(q5)*sin(q6) | cos(q5) |
+| -sin(q4)*cos(q5)*cos(q6) - sin(q6)*cos(q4) | sin(q4)*sin(q6)*cos(q5) - cos(q4)*cos(q6) | sin(q4)*sin(q5) |
 
-Define p = sqrt(r13 * r13 + r33 * r33), then
+Define p = sqrt(r13 * r13 + r33 * r33), then    
 **q5 = atan2(p, r23)**    
 **q4 = atan2(r33 / p, -r13 / p)**
 **q6 = atan2(-r22 / p, r21 / p)**
@@ -160,4 +164,4 @@ From the gripper target orientation, the last three joint angles can also be cal
 
 The results are then assembled and returned.
 
-A screen recording of execution can be found at [this youtube link](https://youtu.be/4g6uf2Pm1OM)
+A screen recording of execution can be found at [this youtube link](https://youtu.be/4g6uf2Pm1OM).
