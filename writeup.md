@@ -164,4 +164,12 @@ From the gripper target orientation, the last three joint angles can also be cal
 
 The results are then assembled and returned.
 
-A screen recording of execution can be found at [this youtube link](https://youtu.be/4g6uf2Pm1OM).
+A screen recording of execution can be found at [this youtube link](https://youtu.be/4g6uf2Pm1OM).    
+The screen was recorded from a phone, because the computing for robot simulation was so intensive that left little resource for screen recording.
+
+Area of improvement:    
+Problem:     
+Many times, joint4 and joint6 would both rotate for about 180 degrees to arrive at approximately the same orientation.  
+
+Potential Solution:     
+A more sophisticated IK algorithm could give joint angles that are faster to arrive at, while resulting in the same final pose.
