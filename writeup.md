@@ -160,4 +160,4 @@ From the gripper target orientation, the last three joint angles can also be cal
 
 The results are then assembled and returned.
 
-A screen recording of execution can be found at [misc_videos/video.mp4](./misc_videos/video.mp4)
+A screen recording of execution can be found at [this youtube link](https://youtu.be/4g6uf2Pm1OM)
