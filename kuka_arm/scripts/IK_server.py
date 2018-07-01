@@ -17,6 +17,7 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import Pose
 from mpmath import *
 from sympy import *
+import numpy as np
 
 
 dtr = pi/180.
@@ -24,6 +25,7 @@ dtr = pi/180.
 
 def dh_transform(alpha, a, d, theta):
     # Takes angles in radians
+    # Returns DH transformation between joints
     return Matrix([[           cos(theta),           -sin(theta),           0,             a],
                    [sin(theta)*cos(alpha), cos(theta)*cos(alpha), -sin(alpha), -sin(alpha)*d],
                    [sin(theta)*sin(alpha), cos(theta)*sin(alpha),  cos(alpha),  cos(alpha)*d],
@@ -31,6 +33,7 @@ def dh_transform(alpha, a, d, theta):
 
 
 def rot_x(q):
+    # Rotation matrix around X-axis
     R_x = Matrix([[1, 0, 0],
                   [0, cos(q), -sin(q)],
                   [0, sin(q), cos(q)]])
@@ -39,6 +42,7 @@ def rot_x(q):
 
 
 def rot_y(q):
+    # Rotation matrix around Y-axis
     R_y = Matrix([[cos(q), 0, sin(q)],
                   [0, 1, 0],
                   [-sin(q), 0, cos(q)]])
@@ -47,6 +51,7 @@ def rot_y(q):
 
 
 def rot_z(q):
+    # Rotation matrix around Z-axis
     R_z = Matrix([[cos(q), -sin(q), 0],
                   [sin(q), cos(q), 0],
                   [0, 0, 1]])
@@ -55,10 +60,11 @@ def rot_z(q):
 
 
 def init_constants():
+    # Set DH constants read from kr210.urdf.xacro
     d1 = 0.33 + 0.42
     a1 = 0.35
     a2 = 1.25
-    a3 = -0.054
+    a3 = 0.054
     d4 = 0.96 + 0.54
     dg = 0.193 + 0.11
 
@@ -66,13 +72,14 @@ def init_constants():
 
 
 def forward_dh_transform(q1, q2, q3, q4, q5, q6):
+    # Returns transformation matrices, along with constants used
     d1, a1, a2, a3, d4, dg = init_constants()
 
     # Define Modified DH Transformation matrix
     T0_1 = dh_transform(0, 0, d1, q1)
     T1_2 = dh_transform(-pi / 2, a1, 0, -pi / 2 + q2)
     T2_3 = dh_transform(0, a2, 0, q3)
-    T3_4 = dh_transform(-pi / 2, a3, d4, q4)
+    T3_4 = dh_transform(-pi / 2, -a3, d4, q4)
     T4_5 = dh_transform(pi / 2, 0, 0, q5)
     T5_6 = dh_transform(-pi / 2, 0, 0, q6)
     T6_g = dh_transform(0, 0, dg, 0)
@@ -97,11 +104,11 @@ def compute_IK(req, calculate_fk=False):
     T0_4 = T0_1 * T1_2 * T2_3 * T3_4
     T_corr = R_corr.row_join(Matrix([[0], [0], [0]])).col_join(Matrix([[0, 0, 0, 1]]))
     T0_g = T0_4 * T4_5 * T5_6 * T6_g * T_corr
+
     # Extract rotation matrices from the transformation matrices
     R0_1 = T0_1[0:3, 0:3]
     R1_2 = T1_2[0:3, 0:3]
     R2_3 = T2_3[0:3, 0:3]
-    R3_4 = T3_4[0:3, 0:3]
 
     R0_3 = R0_1 * R1_2 * R2_3
     ###
@@ -124,13 +131,17 @@ def compute_IK(req, calculate_fk=False):
              req.poses[x].orientation.z, req.poses[x].orientation.w])
 
         ### Your IK code here
-        # Compensate for rotation discrepancy between DH parameters and Gazebo
 
-        # Calculate joint angles using Geometric IK method
+        # Rotation matrix in DH frame, compensated for rotation discrepancy between DH parameters and Gazebo
         Rrpy = rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr.transpose()
+
+        # Target positions for end-effector and wrist center
         pee_target = Matrix([[px], [py], [pz]])
         pwc_target = pee_target - dg * Rrpy[:, 2]
 
+        # Calculate joint angles using Geometric IK method
+
+        # Position of wc gives first 3 q
         theta1 = atan2(pwc_target[1], pwc_target[0])
 
         h = pwc_target[2] - d1
@@ -146,7 +157,7 @@ def compute_IK(req, calculate_fk=False):
         c = acos((B * B + A * A - C * C) / (2 * B * A))
         theta3 = pi - c - rho
 
-        # Compute last 3 q
+        # Orientation of end-effector gives last 3 q
         R0_3_inv = R0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3}).transpose()
         R3_6 = R0_3_inv * Rrpy
 
@@ -165,6 +176,7 @@ def compute_IK(req, calculate_fk=False):
         # In the next line replace theta1,theta2...,theta6 by your joint angle variables
         joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
 
+        # Utility code for computing and returning forward kinematics results
         pwc, pee, euler_angles = [None] * 3
         if calculate_fk:
             params = {q1: theta1,
@@ -203,9 +215,23 @@ def handle_calculate_IK(req):
         print "No valid poses received"
         return -1
     else:
-        joint_trajectory_list = compute_IK(req)
+        RECORD_ERROR = False
+        joint_trajectory_list = compute_IK(req, calculate_fk=RECORD_ERROR)
         response_list = [item[0] for item in joint_trajectory_list]
         rospy.loginfo("length of Joint Trajectory List: %s" % len(response_list))
+
+        if RECORD_ERROR:
+            cartesian_positions = [item[1] for item in joint_trajectory_list]
+            pee = [item[1] for item in cartesian_positions]
+            pee_target = [item.position for item in req.poses]
+            euler_angles = [item[2] for item in cartesian_positions]
+            euler_target = [tf.transformations.euler_from_quaternion(
+                [item.orientation.x, item.orientation.y, item.orientation.z, item.orientation.w]) for item in req.poses]
+            position_errors = [np.linalg.norm(position-target) for position, target in zip(pee, pee_target)]
+            euler_errors = [np.linalg.norm(euler_angle-target) for euler_angle, target in zip(euler_angles, euler_target)]
+            errors = np.array([position_errors, euler_errors])
+            with open('error.npy', 'w+') as f:
+                np.save(f, errors)
         return CalculateIKResponse(response_list)
 
 
@@ -215,6 +241,7 @@ def IK_server():
     s = rospy.Service('calculate_ik', CalculateIK, handle_calculate_IK)
     print "Ready to receive an IK request"
     rospy.spin()
+
 
 if __name__ == "__main__":
     IK_server()
